@@ -1,0 +1,10 @@
+﻿<Application>
+  <Menus>
+    <action type="add">
+      <Menu Checked="0" Enabled="1" FatherUID="8704" Image="" String="Herraminetas EXPERT ONE" Type="2" UniqueID="EXO-MnHERR"></Menu>
+      <Menu Checked="0" Enabled="1" FatherUID="EXO-MnHERR" Image="" String="Parametrización" Type="1" UniqueID="EXO-MnEPA"></Menu>
+      <Menu Checked="0" Enabled="1" FatherUID="EXO-MnHERR" Image="" String="Integrar Addon" Type="1" UniqueID="EXO-MnEAD"></Menu>
+      <Menu Checked="0" Enabled="1" FatherUID="EXO-MnHERR" Image="" String="Integrar Report" Type="1" UniqueID="EXO-MnERPT"></Menu>
+    </action>
+  </Menus>
+</Application>
