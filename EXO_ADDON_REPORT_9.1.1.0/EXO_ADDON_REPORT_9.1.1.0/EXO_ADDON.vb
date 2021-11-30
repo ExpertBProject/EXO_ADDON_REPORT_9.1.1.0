@@ -14,7 +14,7 @@ Public Class EXO_ADDON
                 Select Case infoEvento.MenuUID
                     Case "EXO-MnEAD"
                         If CargarFormADDON() = False Then
-                            Exit Function
+                            Return False
                         End If
                 End Select
             End If
@@ -178,48 +178,56 @@ Public Class EXO_ADDON
         Try
             oForm = objGlobal.SBOApp.Forms.Item(pVal.FormUID)
 
-            If pVal.ItemUID = "1" Then
+            If pVal.ItemUID = "btn_Carga" Then
 #Region "Cargar en el UDO"
                 sArchivoOrigen = CType(oForm.Items.Item("txt_Fich").Specific, SAPbouiCOM.EditText).Value.ToString
-                sNomFICH = IO.Path.GetFileName(sArchivoOrigen)
-                sArchivo = sArchivo & sNomFICH
-                'Hacemos copia de seguridad para tratarlo
-                OdtEmpresas = New System.Data.DataTable
-                OdtEmpresas.Clear()
-                sSQL = "SELECT * FROM ""@EXO_IPANELL"" WHERE ""Code""='INTERCOMPANY' and ""U_EXO_TIPO""='D' "
-                OdtEmpresas = objGlobal.refDi.SQL.sqlComoDataTable(sSQL)
-                If OdtEmpresas.Rows.Count > 0 Then
-                    objGlobal.SBOApp.StatusBar.SetText("Se va a proceder a recorrer las SOCIEDADES...", BoMessageTime.bmt_Short, BoStatusBarMessageType.smt_Warning)
-                    For Each dr As DataRow In OdtEmpresas.Rows
-                        Try
-                            sBBDD = dr.Item("U_EXO_BBDD").ToString : sUser = dr.Item("U_EXO_USER").ToString : sPass = dr.Item("U_EXO_PASS").ToString
-                            EXO_CONEXIONES.Connect_Company(oCompanyDes, objGlobal, sUser, sPass, sBBDD)
-                            objGlobal.SBOApp.StatusBar.SetText("Sociedad: " & oCompanyDes.CompanyName & ". Sincronizando Addon: " & sNomFICH, BoMessageTime.bmt_Short, BoStatusBarMessageType.smt_Warning)
-                            sSQL = "SELECT ""U_EXO_PATH"" FROM """ & oCompanyDes.CompanyDB & """.""@EXO_OGEN"""
-                            sArchivo = objGlobal.refDi.SQL.sqlStringB1(sSQL)
-                            Select Case CType(oForm.Items.Item("cb_Format").Specific, SAPbouiCOM.ComboBox).Selected.Value.ToString
-                                Case "10.Dll" : sArchivo &= "\10.Dll\"
-                                Case "10.Dll_64" : sArchivo &= "\10.Dll_64\"
-                            End Select
-                            sArchivo = sArchivo & sNomFICH
-                            EXO_GLOBALES.Copia_Seguridad(objGlobal, sArchivoOrigen, sArchivo)
-                            Dim sAddon As String = IO.Path.GetFileNameWithoutExtension(sArchivoOrigen)
-                            EXO_GLOBALES.Sincroniza_Addon(oCompanyDes, objGlobal, sNomFICH, sAddon)
-                        Catch ex As Exception
-                            objGlobal.SBOApp.StatusBar.SetText("Sociedad: " & oCompanyDes.CompanyName & ". Error: " & ex.Message, BoMessageTime.bmt_Short, BoStatusBarMessageType.smt_Error)
-                        Finally
-                            objGlobal.SBOApp.StatusBar.SetText("Sociedad: " & oCompanyDes.CompanyName & ". Fin Sincronización.", BoMessageTime.bmt_Short, BoStatusBarMessageType.smt_Warning)
-                            EXO_CONEXIONES.Disconnect_Company(oCompanyDes)
-                        End Try
-                    Next
+                If sArchivoOrigen.Trim <> "" Then
+                    Select Case CType(oForm.Items.Item("cb_Format").Specific, SAPbouiCOM.ComboBox).Selected.Value.ToString
+                        Case "10.Dll" : sArchivo &= "\10.Dll\"
+                        Case "10.Dll_64" : sArchivo &= "\10.Dll_64\"
+                    End Select
+                    sNomFICH = IO.Path.GetFileName(sArchivoOrigen)
+                    sArchivo = sArchivo & sNomFICH
+                    'Hacemos copia de seguridad para tratarlo
+                    OdtEmpresas = New System.Data.DataTable
+                    OdtEmpresas.Clear()
+                    sSQL = "SELECT * FROM ""@EXO_IPANELL"" WHERE ""Code""='INTERCOMPANY' and ""U_EXO_TIPO""='D' "
+                    OdtEmpresas = objGlobal.refDi.SQL.sqlComoDataTable(sSQL)
+                    If OdtEmpresas.Rows.Count > 0 Then
+                        objGlobal.SBOApp.StatusBar.SetText("Se va a proceder a recorrer las SOCIEDADES...", BoMessageTime.bmt_Short, BoStatusBarMessageType.smt_Warning)
+                        For Each dr As DataRow In OdtEmpresas.Rows
+                            Try
+                                sBBDD = dr.Item("U_EXO_BBDD").ToString : sUser = dr.Item("U_EXO_USER").ToString : sPass = dr.Item("U_EXO_PASS").ToString
+                                EXO_CONEXIONES.Connect_Company(oCompanyDes, objGlobal, sUser, sPass, sBBDD)
+                                objGlobal.SBOApp.StatusBar.SetText("Sociedad: " & oCompanyDes.CompanyName & ". Sincronizando Addon: " & sNomFICH, BoMessageTime.bmt_Short, BoStatusBarMessageType.smt_Warning)
+                                sSQL = "SELECT ""U_EXO_PATH"" FROM """ & oCompanyDes.CompanyDB & """.""@EXO_OGEN"""
+                                sArchivo = objGlobal.refDi.SQL.sqlStringB1(sSQL)
+                                Select Case CType(oForm.Items.Item("cb_Format").Specific, SAPbouiCOM.ComboBox).Selected.Value.ToString
+                                    Case "10.Dll" : sArchivo &= "\10.Dll\"
+                                    Case "10.Dll_64" : sArchivo &= "\10.Dll_64\"
+                                End Select
+                                sArchivo = sArchivo & sNomFICH
+                                EXO_GLOBALES.Copia_Seguridad(objGlobal, sArchivoOrigen, sArchivo)
+                                Dim sAddon As String = IO.Path.GetFileNameWithoutExtension(sArchivoOrigen)
+                                EXO_GLOBALES.Sincroniza_Addon(oCompanyDes, objGlobal, sNomFICH, sAddon)
+                            Catch ex As Exception
+                                objGlobal.SBOApp.StatusBar.SetText("Sociedad: " & oCompanyDes.CompanyName & ". Error: " & ex.Message, BoMessageTime.bmt_Short, BoStatusBarMessageType.smt_Error)
+                            Finally
+                                objGlobal.SBOApp.StatusBar.SetText("Sociedad: " & oCompanyDes.CompanyName & ". Fin Sincronización.", BoMessageTime.bmt_Short, BoStatusBarMessageType.smt_Warning)
+                                EXO_CONEXIONES.Disconnect_Company(oCompanyDes)
+                            End Try
+                        Next
 
+                    Else
+                        EXO_GLOBALES.Copia_Seguridad(objGlobal, sArchivoOrigen, sArchivo)
+                    End If
+                    objGlobal.SBOApp.MessageBox(" Fin Sincronización.")
                 Else
-                    EXO_GLOBALES.Copia_Seguridad(objGlobal, sArchivoOrigen, sArchivo)
+                    objGlobal.SBOApp.StatusBar.SetText("Sin fichero no se puede importar el Addon...", BoMessageTime.bmt_Short, BoStatusBarMessageType.smt_Warning)
                 End If
 #End Region
             ElseIf pVal.ItemUID = "btn_Fich" Then
-                sArchivo = objGlobal.path
-
+#Region "Coger la ruta del fichero"
                 If CType(oForm.Items.Item("cb_Format").Specific, SAPbouiCOM.ComboBox).Selected.Value.ToString <> "" Then
                     Select Case CType(oForm.Items.Item("cb_Format").Specific, SAPbouiCOM.ComboBox).Selected.Value.ToString
                         Case "10.Dll" : sArchivo &= "\10.Dll\"
@@ -287,6 +295,7 @@ Public Class EXO_ADDON
                     objGlobal.SBOApp.StatusBar.SetText("(EXO) - No ha seleccionado el formato a importar.", SAPbouiCOM.BoMessageTime.bmt_Short, SAPbouiCOM.BoStatusBarMessageType.smt_Error)
                     CType(oForm.Items.Item("cb_Format").Specific, SAPbouiCOM.ComboBox).Active = True
                 End If
+#End Region
             End If
 
             EventHandler_ItemPressed_After = True
@@ -300,7 +309,7 @@ Public Class EXO_ADDON
             If OdtEmpresas IsNot Nothing Then
                 OdtEmpresas = Nothing
             End If
-            objGlobal.SBOApp.MessageBox(" Fin Sincronización.")
+
         End Try
     End Function
 End Class

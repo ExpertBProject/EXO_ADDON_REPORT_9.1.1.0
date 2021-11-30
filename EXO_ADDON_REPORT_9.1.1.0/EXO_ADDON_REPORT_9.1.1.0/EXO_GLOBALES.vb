@@ -90,4 +90,229 @@ Public Class EXO_GLOBALES
 #End Region
         End Try
     End Function
+    Public Shared Function Import_Report(ByRef oCompanyDes As SAPbobsCOM.Company, ByRef oObjGlobal As EXO_UIAPI.EXO_UIAPI,
+                                         ByVal sNOMFICH As String, ByRef oForm As SAPbouiCOM.Form) As Boolean
+#Region "Varibales"
+        Dim oLayoutService As SAPbobsCOM.ReportLayoutsService = Nothing
+        Dim oReport As SAPbobsCOM.ReportLayout = Nothing
+        Dim sTypeCode As String = ""
+        Dim oCompanyService As SAPbobsCOM.CompanyService = Nothing
+        Dim oBlobParams As SAPbobsCOM.BlobParams = Nothing
+        Dim oKeySegment As SAPbobsCOM.BlobTableKeySegment = Nothing
+        Dim oBlob As SAPbobsCOM.Blob = Nothing
+        Dim sReportExiste As String = ""
+        Dim sSQL As String = ""
+#End Region
+        Import_Report = False
+        Try
+            oLayoutService = CType(oCompanyDes.GetCompanyService().GetBusinessService(SAPbobsCOM.ServiceTypes.ReportLayoutsService), SAPbobsCOM.ReportLayoutsService)
+            oReport = CType(oLayoutService.GetDataInterface(SAPbobsCOM.ReportLayoutsServiceDataInterfaces.rlsdiReportLayout), SAPbobsCOM.ReportLayout)
+
+            'Initialize critical properties 
+            ' Use TypeCode "RCRI" to specify a Crystal Report. 
+            ' Use other TypeCode to specify a layout for a document type. 
+            ' List of TypeCode types are in table RTYP. 
+            sTypeCode = oForm.DataSources.UserDataSources.Item("UDF").Value.ToString
+            Select Case sTypeCode
+                Case "I" : sTypeCode = "RCRI"
+                Case Else : sTypeCode = oForm.DataSources.UserDataSources.Item("UDL").Value.ToString
+            End Select
+            oReport.Name = oForm.DataSources.UserDataSources.Item("UDNOM").Value.ToString
+            oReport.TypeCode = sTypeCode
+            oReport.Author = oCompanyDes.UserName
+            oReport.Category = SAPbobsCOM.ReportLayoutCategoryEnum.rlcCrystal
+            oReport.Localization = "ES"
+
+            Dim newReportCode As String = ""
+            Try
+                ' Add New object 
+                oReport.Category = SAPbobsCOM.ReportLayoutCategoryEnum.rlcCrystal
+
+                'Comprobamos si Existe
+                sSQL = "SELECT ""DocCode"" FROM  """ & oCompanyDes.CompanyDB & """.""RDOC"" WHERE ""DocName""='" & oForm.DataSources.UserDataSources.Item("UDNOM").Value.ToString & "' "
+                sReportExiste = oObjGlobal.refDi.SQL.sqlStringB1(sSQL)
+                If sReportExiste <> "" Then
+                    Dim oExisteReportParams As SAPbobsCOM.ReportLayoutParams = CType(oLayoutService.GetDataInterface(SAPbobsCOM.ReportLayoutsServiceDataInterfaces.rlsdiReportLayoutParams), SAPbobsCOM.ReportLayoutParams)
+                    oExisteReportParams.LayoutCode = sReportExiste
+                    oLayoutService.DeleteReportLayout(oExisteReportParams)
+                    oObjGlobal.SBOApp.StatusBar.SetText("(EXO) - Se borra Report / Layaout existente", SAPbouiCOM.BoMessageTime.bmt_Short, SAPbouiCOM.BoStatusBarMessageType.smt_Warning)
+                End If
+
+
+                Dim oNewReportParams As SAPbobsCOM.ReportLayoutParams = CType(oLayoutService.GetDataInterface(SAPbobsCOM.ReportLayoutsServiceDataInterfaces.rlsdiReportLayoutParams), SAPbobsCOM.ReportLayoutParams)
+                Select Case sTypeCode
+                    Case "RCRI" : oNewReportParams = oLayoutService.AddReportLayoutToMenu(oReport, oForm.DataSources.UserDataSources.Item("UDL").Value.ToString)
+                    Case Else : oNewReportParams = oLayoutService.AddReportLayout(oReport)
+                End Select
+
+                'Get code of the added ReportLayout object 
+                newReportCode = oNewReportParams.LayoutCode
+            Catch ex As Exception
+                Dim sError As String = Err.Description
+                oObjGlobal.SBOApp.StatusBar.SetText(sError, SAPbouiCOM.BoMessageTime.bmt_Short, SAPbouiCOM.BoStatusBarMessageType.smt_Error)
+            End Try
+
+            ' Wpload .rpt file using SetBlob interface 
+            Dim rptFilePath As String = sNOMFICH
+
+            oCompanyService = oCompanyDes.GetCompanyService()
+            'Specify the table And field to update 
+            oBlobParams = CType(oCompanyService.GetDataInterface(SAPbobsCOM.CompanyServiceDataInterfaces.csdiBlobParams), SAPbobsCOM.BlobParams)
+            oBlobParams.Table = "RDOC"
+            oBlobParams.Field = "Template"
+
+            ' Specify the record whose blob field Is to be set 
+            oKeySegment = oBlobParams.BlobTableKeySegments.Add()
+            oKeySegment.Name = "DocCode"
+            oKeySegment.Value = newReportCode
+
+            oBlob = CType(oCompanyService.GetDataInterface(SAPbobsCOM.CompanyServiceDataInterfaces.csdiBlob), SAPbobsCOM.Blob)
+
+            ' Put the rpt file into buffer 
+            Dim oFile As FileStream = New FileStream(rptFilePath, System.IO.FileMode.Open)
+            Dim fileSize As Integer = CType(oFile.Length, Integer)
+            Dim buf(CInt(oFile.Length() - 1)) As Byte
+            oFile.Read(buf, 0, fileSize)
+            oFile.Close()
+
+
+            ' Convert memory buffer to Base64 string 
+            oBlob.Content = Convert.ToBase64String(buf, 0, fileSize)
+
+            Try
+                'Upload Blob to database 
+                oCompanyService.SetBlob(oBlobParams, oBlob)
+            Catch ex As Exception
+                Dim sError As String = Err.Description
+                oObjGlobal.SBOApp.StatusBar.SetText(sError, SAPbouiCOM.BoMessageTime.bmt_Short, SAPbouiCOM.BoStatusBarMessageType.smt_Error)
+            End Try
+
+            Import_Report = True
+        Catch ex As Exception
+            Throw ex
+        Finally
+#Region "Liberar"
+            EXO_CleanCOM.CLiberaCOM.liberaCOM(CType(oReport, Object))
+            EXO_CleanCOM.CLiberaCOM.liberaCOM(CType(oLayoutService, Object))
+
+            EXO_CleanCOM.CLiberaCOM.liberaCOM(CType(oBlob, Object))
+            EXO_CleanCOM.CLiberaCOM.liberaCOM(CType(oKeySegment, Object))
+            EXO_CleanCOM.CLiberaCOM.liberaCOM(CType(oBlobParams, Object))
+            EXO_CleanCOM.CLiberaCOM.liberaCOM(CType(oCompanyService, Object))
+
+#End Region
+        End Try
+    End Function
+    Public Shared Function Import_Report2(ByRef oCompanyDes As SAPbobsCOM.Company, ByRef oObjGlobal As EXO_UIAPI.EXO_UIAPI,
+                                         ByVal sNOMFICH As String, ByRef oForm As SAPbouiCOM.Form) As Boolean
+#Region "Varibales"
+        Dim oLayoutService As SAPbobsCOM.ReportLayoutsService = Nothing
+        Dim oReport As SAPbobsCOM.ReportLayout = Nothing
+        Dim sTypeCode As String = ""
+        Dim oCompanyService As SAPbobsCOM.CompanyService = Nothing
+        Dim oBlobParams As SAPbobsCOM.BlobParams = Nothing
+        Dim oKeySegment As SAPbobsCOM.BlobTableKeySegment = Nothing
+        Dim oBlob As SAPbobsCOM.Blob = Nothing
+        Dim sReportExiste As String = ""
+        Dim sSQL As String = ""
+#End Region
+        Import_Report2 = False
+        Try
+            oLayoutService = CType(oCompanyDes.GetCompanyService().GetBusinessService(SAPbobsCOM.ServiceTypes.ReportLayoutsService), SAPbobsCOM.ReportLayoutsService)
+            oReport = CType(oLayoutService.GetDataInterface(SAPbobsCOM.ReportLayoutsServiceDataInterfaces.rlsdiReportLayout), SAPbobsCOM.ReportLayout)
+
+            'Initialize critical properties 
+            ' Use TypeCode "RCRI" to specify a Crystal Report. 
+            ' Use other TypeCode to specify a layout for a document type. 
+            ' List of TypeCode types are in table RTYP. 
+            sTypeCode = oForm.DataSources.UserDataSources.Item("UDF").Value.ToString
+            Select Case sTypeCode
+                Case "I" : sTypeCode = "RCRI"
+                Case Else : sTypeCode = oForm.DataSources.UserDataSources.Item("UDL").Value.ToString
+            End Select
+            oReport.Name = oForm.DataSources.UserDataSources.Item("UDNOM").Value.ToString
+            oReport.TypeCode = sTypeCode
+            oReport.Author = oCompanyDes.UserName
+            oReport.Category = SAPbobsCOM.ReportLayoutCategoryEnum.rlcCrystal
+            oReport.Localization = "ES"
+
+            Dim newReportCode As String = ""
+            Try
+                ' Add New object 
+                oReport.Category = SAPbobsCOM.ReportLayoutCategoryEnum.rlcCrystal
+
+                'Comprobamos si Existe y borramos
+                sSQL = "SELECT ""DocCode"" FROM  """ & oCompanyDes.CompanyDB & """.""RDOC"" WHERE ""DocName""='" & oForm.DataSources.UserDataSources.Item("UDNOM").Value.ToString & "' "
+                sReportExiste = oObjGlobal.refDi.SQL.sqlStringB1(sSQL)
+                If sReportExiste <> "" Then
+                    Dim oExisteReportParams As SAPbobsCOM.ReportLayoutParams = CType(oLayoutService.GetDataInterface(SAPbobsCOM.ReportLayoutsServiceDataInterfaces.rlsdiReportLayoutParams), SAPbobsCOM.ReportLayoutParams)
+                    oExisteReportParams.LayoutCode = sReportExiste
+                    oLayoutService.DeleteReportLayout(oExisteReportParams)
+                End If
+
+                Dim oNewReportParams As SAPbobsCOM.ReportLayoutParams = CType(oLayoutService.GetDataInterface(SAPbobsCOM.ReportLayoutsServiceDataInterfaces.rlsdiReportLayoutParams), SAPbobsCOM.ReportLayoutParams)
+                Select Case sTypeCode
+                    Case "RCRI" : oNewReportParams = oLayoutService.AddReportLayoutToMenu(oReport, "12800")
+                    Case Else : oNewReportParams = oLayoutService.AddReportLayout(oReport)
+                End Select
+
+                'Get code of the added ReportLayout object 
+                newReportCode = oNewReportParams.LayoutCode
+
+            Catch ex As Exception
+                Dim sError As String = Err.Description
+                oObjGlobal.SBOApp.StatusBar.SetText(sError, SAPbouiCOM.BoMessageTime.bmt_Short, SAPbouiCOM.BoStatusBarMessageType.smt_Error)
+            End Try
+
+            ' Wpload .rpt file using SetBlob interface 
+            Dim rptFilePath As String = sNOMFICH
+
+            oCompanyService = oCompanyDes.GetCompanyService()
+            'Specify the table And field to update 
+            oBlobParams = CType(oCompanyService.GetDataInterface(SAPbobsCOM.CompanyServiceDataInterfaces.csdiBlobParams), SAPbobsCOM.BlobParams)
+            oBlobParams.Table = "RDOC"
+            oBlobParams.Field = "Template"
+
+            ' Specify the record whose blob field Is to be set 
+            oKeySegment = oBlobParams.BlobTableKeySegments.Add()
+            oKeySegment.Name = "DocCode"
+            oKeySegment.Value = newReportCode
+
+            oBlob = CType(oCompanyService.GetDataInterface(SAPbobsCOM.CompanyServiceDataInterfaces.csdiBlob), SAPbobsCOM.Blob)
+
+            ' Put the rpt file into buffer 
+            Dim oFile As FileStream = New FileStream(rptFilePath, System.IO.FileMode.Open)
+            Dim fileSize As Integer = CType(oFile.Length, Integer)
+            Dim buf(CInt(oFile.Length() - 1)) As Byte
+            oFile.Read(buf, 0, fileSize)
+            oFile.Close()
+
+
+            ' Convert memory buffer to Base64 string 
+            oBlob.Content = Convert.ToBase64String(buf, 0, fileSize)
+
+            Try
+                'Upload Blob to database 
+                oCompanyService.SetBlob(oBlobParams, oBlob)
+            Catch ex As Exception
+                Dim sError As String = Err.Description
+                oObjGlobal.SBOApp.StatusBar.SetText(sError, SAPbouiCOM.BoMessageTime.bmt_Short, SAPbouiCOM.BoStatusBarMessageType.smt_Error)
+            End Try
+
+            Import_Report2 = True
+        Catch ex As Exception
+            Throw ex
+        Finally
+#Region "Liberar"
+            EXO_CleanCOM.CLiberaCOM.liberaCOM(CType(oReport, Object))
+            EXO_CleanCOM.CLiberaCOM.liberaCOM(CType(oLayoutService, Object))
+
+            EXO_CleanCOM.CLiberaCOM.liberaCOM(CType(oBlob, Object))
+            EXO_CleanCOM.CLiberaCOM.liberaCOM(CType(oKeySegment, Object))
+            EXO_CleanCOM.CLiberaCOM.liberaCOM(CType(oBlobParams, Object))
+            EXO_CleanCOM.CLiberaCOM.liberaCOM(CType(oCompanyService, Object))
+
+#End Region
+        End Try
+    End Function
 End Class

@@ -64,7 +64,6 @@ Public Class INICIO
         Dim Clase As Object = Nothing
 
         Try
-
             If infoEvento.BeforeAction = True Then
                 Select Case infoEvento.MenuUID
                     Case "1281", "1282" 'Buscar y añadir
@@ -124,6 +123,7 @@ Public Class INICIO
             End Select
 
             Return MyBase.SBOApp_ItemEvent(infoEvento)
+
         Catch ex As Exception
             objGlobal.Mostrar_Error(ex, EXO_TipoMensaje.Excepcion, EXO_TipoSalidaMensaje.MessageBox, SAPbouiCOM.BoMessageTime.bmt_Medium, SAPbouiCOM.BoStatusBarMessageType.smt_Error)
             Return False

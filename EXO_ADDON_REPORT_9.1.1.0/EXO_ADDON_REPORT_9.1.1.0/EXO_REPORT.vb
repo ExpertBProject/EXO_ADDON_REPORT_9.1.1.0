@@ -1,4 +1,6 @@
-﻿Imports SAPbouiCOM
+﻿Imports System.IO
+Imports OfficeOpenXml
+Imports SAPbouiCOM
 Public Class EXO_REPORT
     Private objGlobal As EXO_UIAPI.EXO_UIAPI
     Public Sub New(ByRef objG As EXO_UIAPI.EXO_UIAPI)
@@ -9,12 +11,13 @@ Public Class EXO_REPORT
         Dim oForm As SAPbouiCOM.Form = Nothing
         Try
             If infoEvento.BeforeAction = True Then
+                Dim ORS As SAPbobsCOM.Recordset = objGlobal.compañia.GetCompanyList
 
             Else
                 Select Case infoEvento.MenuUID
                     Case "EXO-MnERPT"
                         If CargarFormREPORT() = False Then
-                            Exit Function
+                            Return False
                         End If
                 End Select
             End If
@@ -55,7 +58,8 @@ Public Class EXO_REPORT
                     Exit Function
                 End If
             End Try
-
+            CType(oForm.Items.Item("cb_Format").Specific, SAPbouiCOM.ComboBox).Select("I", BoSearchKey.psk_ByValue)
+            Carga_Datos_Menu(oForm)
             CType(oForm.Items.Item("txt_Fich").Specific, SAPbouiCOM.EditText).Item.Enabled = False
             oForm.Visible = True
 
@@ -89,7 +93,9 @@ Public Class EXO_REPORT
                         Case "EXO_REPORT"
                             Select Case infoEvento.EventType
                                 Case SAPbouiCOM.BoEventTypes.et_COMBO_SELECT
-
+                                    If EventHandler_COMBO_SELECT_After(infoEvento) = False Then
+                                        Return False
+                                    End If
                                 Case SAPbouiCOM.BoEventTypes.et_ITEM_PRESSED
                                     If EventHandler_ItemPressed_After(infoEvento) = False Then
                                         Return False
@@ -177,10 +183,11 @@ Public Class EXO_REPORT
         Try
             oForm = objGlobal.SBOApp.Forms.Item(pVal.FormUID)
 
-            If pVal.ItemUID = "1" Then
-                If pVal.ActionSuccess = True Then
-#Region "Cargar en el UDO"
-                    sArchivoOrigen = CType(oForm.Items.Item("txt_Fich").Specific, SAPbouiCOM.EditText).Value.ToString
+            If pVal.ItemUID = "btn_Carga" Then
+#Region "Cargar REPORT"
+                sArchivo = objGlobal.path & "\05.Rpt\"
+                sArchivoOrigen = CType(oForm.Items.Item("txt_Fich").Specific, SAPbouiCOM.EditText).Value.ToString
+                If sArchivoOrigen.Trim <> "" Then
                     sNomFICH = IO.Path.GetFileName(sArchivoOrigen)
                     sArchivo = sArchivo & sNomFICH
                     'Hacemos copia de seguridad para tratarlo
@@ -194,17 +201,15 @@ Public Class EXO_REPORT
                             Try
                                 sBBDD = dr.Item("U_EXO_BBDD").ToString : sUser = dr.Item("U_EXO_USER").ToString : sPass = dr.Item("U_EXO_PASS").ToString
                                 EXO_CONEXIONES.Connect_Company(oCompanyDes, objGlobal, sUser, sPass, sBBDD)
-                                objGlobal.SBOApp.StatusBar.SetText("Sociedad: " & oCompanyDes.CompanyName & ". Sincronizando Addon: " & sNomFICH, BoMessageTime.bmt_Short, BoStatusBarMessageType.smt_Warning)
+                                objGlobal.SBOApp.StatusBar.SetText("Sociedad: " & oCompanyDes.CompanyName & ". Importando Report: " & sNomFICH, BoMessageTime.bmt_Short, BoStatusBarMessageType.smt_Warning)
                                 sSQL = "SELECT ""U_EXO_PATH"" FROM """ & oCompanyDes.CompanyDB & """.""@EXO_OGEN"""
                                 sArchivo = objGlobal.refDi.SQL.sqlStringB1(sSQL)
-                                Select Case CType(oForm.Items.Item("cb_Format").Specific, SAPbouiCOM.ComboBox).Selected.Value.ToString
-                                    Case "10.Dll" : sArchivo &= "\10.Dll\"
-                                    Case "10.Dll_64" : sArchivo &= "\10.Dll_64\"
-                                End Select
+                                sArchivo &= "\05.Rpt\"
                                 sArchivo = sArchivo & sNomFICH
                                 EXO_GLOBALES.Copia_Seguridad(objGlobal, sArchivoOrigen, sArchivo)
-                                Dim sAddon As String = IO.Path.GetFileNameWithoutExtension(sArchivoOrigen)
-                                EXO_GLOBALES.Sincroniza_Addon(oCompanyDes, objGlobal, sNomFICH, sAddon)
+                                'Importamos el report
+                                EXO_GLOBALES.Import_Report(oCompanyDes, objGlobal, sArchivo, oForm)
+
                             Catch ex As Exception
                                 objGlobal.SBOApp.StatusBar.SetText("Sociedad: " & oCompanyDes.CompanyName & ". Error: " & ex.Message, BoMessageTime.bmt_Short, BoStatusBarMessageType.smt_Error)
                             Finally
@@ -216,17 +221,40 @@ Public Class EXO_REPORT
                     Else
                         EXO_GLOBALES.Copia_Seguridad(objGlobal, sArchivoOrigen, sArchivo)
                     End If
-#End Region
+                    objGlobal.SBOApp.MessageBox(" Fin Sincronización.")
+                Else
+                    objGlobal.SBOApp.StatusBar.SetText("Sin fichero no se puede importar el Report...", BoMessageTime.bmt_Short, BoStatusBarMessageType.smt_Warning)
                 End If
+#End Region
             ElseIf pVal.ItemUID = "btn_Fich" Then
-                sArchivo = objGlobal.path
+#Region "Coger la ruta del fichero"
+                Dim sFormato As String = "" : Dim sLayout As String = ""
+                sFormato = CType(oForm.Items.Item("cb_Format").Specific, SAPbouiCOM.ComboBox).Selected.Value.ToString
+                If CType(oForm.Items.Item("cbLayout").Specific, SAPbouiCOM.ComboBox).Selected IsNot Nothing Then
+                    sLayout = CType(oForm.Items.Item("cbLayout").Specific, SAPbouiCOM.ComboBox).Selected.Value.ToString
+                Else
+                    sLayout = ""
+                End If
 
-                If CType(oForm.Items.Item("cb_Format").Specific, SAPbouiCOM.ComboBox).Selected.Value.ToString <> "" Then
-                    Select Case CType(oForm.Items.Item("cb_Format").Specific, SAPbouiCOM.ComboBox).Selected.Value.ToString
-                        Case "10.Dll" : sArchivo &= "\10.Dll\"
-                        Case "10.Dll_64" : sArchivo &= "\10.Dll_64\"
+                If sFormato <> "" Then
+                    Select Case sLayout
+                        Case ""
+                            If sFormato = "L" Then
+                                objGlobal.SBOApp.MessageBox("Debe indicar dónde importar el Layout.")
+                                objGlobal.SBOApp.StatusBar.SetText("(EXO) - Debe indicar dónde importar el Layout.", SAPbouiCOM.BoMessageTime.bmt_Short, SAPbouiCOM.BoStatusBarMessageType.smt_Warning)
+
+                                oForm.Items.Item("btn_Carga").Enabled = False
+                                Exit Function
+                            End If
                     End Select
-                    sTipoArchivo = "DLL|*.dll"
+                    If oForm.DataSources.UserDataSources.Item("UDNOM").Value.ToString = "" Then
+                        objGlobal.SBOApp.MessageBox("Debe indicar el nombre del Report.")
+                        objGlobal.SBOApp.StatusBar.SetText("(EXO) -Debe indicar el nombre del Report.", SAPbouiCOM.BoMessageTime.bmt_Short, SAPbouiCOM.BoStatusBarMessageType.smt_Warning)
+
+                        oForm.Items.Item("btn_Carga").Enabled = False
+                        Exit Function
+                    End If
+                    sTipoArchivo = "RPT|*.rpt"
 
                     'Tenemos que controlar que es cliente o web
                     If objGlobal.SBOApp.ClientType = SAPbouiCOM.BoClientType.ct_Browser Then
@@ -252,6 +280,7 @@ Public Class EXO_REPORT
                     objGlobal.SBOApp.StatusBar.SetText("(EXO) - No ha seleccionado el formato a importar.", SAPbouiCOM.BoMessageTime.bmt_Short, SAPbouiCOM.BoStatusBarMessageType.smt_Error)
                     CType(oForm.Items.Item("cb_Format").Specific, SAPbouiCOM.ComboBox).Active = True
                 End If
+#End Region
             End If
 
             EventHandler_ItemPressed_After = True
@@ -265,7 +294,95 @@ Public Class EXO_REPORT
             If OdtEmpresas IsNot Nothing Then
                 OdtEmpresas = Nothing
             End If
-            objGlobal.SBOApp.MessageBox(" Fin Sincronización.")
+
         End Try
     End Function
+    Private Function EventHandler_COMBO_SELECT_After(ByRef pVal As ItemEvent) As Boolean
+#Region "Variables"
+        Dim sSQL As String = ""
+        Dim oForm As SAPbouiCOM.Form = Nothing
+#End Region
+
+        EventHandler_COMBO_SELECT_After = False
+
+        Try
+            oForm = objGlobal.SBOApp.Forms.Item(pVal.FormUID)
+            If pVal.ItemUID = "cb_Format" Then
+                Select Case CType(oForm.Items.Item("cb_Format").Specific, SAPbouiCOM.ComboBox).Selected.Value.ToString
+                    Case "I"
+                        Carga_Datos_Menu(oForm)
+                    Case "L"
+                        sSQL = "SELECT ""CODE"" ""Código"", ""NAME"" ""Nombre"" from """ & objGlobal.compañia.CompanyDB & """.""RTYP"" ORDER BY  ""CODE"" "
+                        objGlobal.funcionesUI.cargaCombo(CType(oForm.Items.Item("cbLayout").Specific, SAPbouiCOM.ComboBox).ValidValues, sSQL)
+                End Select
+            End If
+            EventHandler_COMBO_SELECT_After = True
+
+        Catch exCOM As System.Runtime.InteropServices.COMException
+            Throw exCOM
+        Catch ex As Exception
+            Throw ex
+        Finally
+
+
+        End Try
+    End Function
+    Private Sub Carga_Datos_Menu(ByRef oForm As SAPbouiCOM.Form)
+        Dim sPath As String = ""
+        Dim sCodigo As String = ""
+        Dim sDescripcion As String = ""
+        Dim sSQL As String = ""
+        Dim pck As ExcelPackage = Nothing
+        Dim iLin As Integer = 1 : Dim sContenido As String = "-"
+
+        Dim oVatGroup As SAPbobsCOM.VatGroups = Nothing
+        Try
+            objGlobal.SBOApp.StatusBar.SetText("Rellenando Lista Menú ... Espere por favor", SAPbouiCOM.BoMessageTime.bmt_Short, SAPbouiCOM.BoStatusBarMessageType.smt_Warning)
+            sPath = objGlobal.path
+            sPath = objGlobal.refDi.OGEN.rutaConsultas
+            If sPath = "" Then
+                objGlobal.SBOApp.StatusBar.SetText("No se ha encontrado el Path del fichero a cargar.", SAPbouiCOM.BoMessageTime.bmt_Short, SAPbouiCOM.BoStatusBarMessageType.smt_Error)
+                Exit Sub
+            Else
+                sPath += "\MENU.xlsx"
+                'If IO.File.Exists(sPath) = False Then
+                'Sino existe lo copiamos y asignamos
+                EXO_GLOBALES.CopiarRecurso(Reflection.Assembly.GetExecutingAssembly(), "MENU.xlsx", sPath)
+                'End If
+            End If
+
+            ' miramos si existe el fichero y cargamos
+            If File.Exists(sPath) Then
+                Dim excel As New FileInfo(sPath)
+                pck = New ExcelPackage(excel)
+                Dim workbook = pck.Workbook
+                Dim worksheet = workbook.Worksheets.First()
+                sSQL = "SELECT ' ' ""Código"", ' ' ""Nombre"" from ""DUMMY"" "
+                objGlobal.funcionesUI.cargaCombo(CType(oForm.Items.Item("cbLayout").Specific, SAPbouiCOM.ComboBox).ValidValues, sSQL)
+
+                While sContenido.Trim <> ""
+                    iLin += 1
+                    sContenido = worksheet.Cells("A" & iLin).Text
+                    If sContenido.Trim <> "" Then
+                        sCodigo = worksheet.Cells("A" & iLin).Text
+                        sDescripcion = worksheet.Cells("B" & iLin).Text
+                        CType(oForm.Items.Item("cbLayout").Specific, SAPbouiCOM.ComboBox).ValidValues.Add(sCodigo, sDescripcion)
+                    Else
+                        Exit While
+                    End If
+                End While
+
+                objGlobal.SBOApp.StatusBar.SetText("Se rellenado la lista de menú", SAPbouiCOM.BoMessageTime.bmt_Short, SAPbouiCOM.BoStatusBarMessageType.smt_Success)
+                pck.Dispose()
+            Else
+                objGlobal.SBOApp.StatusBar.SetText("No se ha encontrado el Path del fichero a cargar.", SAPbouiCOM.BoMessageTime.bmt_Short, SAPbouiCOM.BoStatusBarMessageType.smt_Error)
+            End If
+
+        Catch exCOM As System.Runtime.InteropServices.COMException
+            objGlobal.Mostrar_Error(exCOM, EXO_UIAPI.EXO_UIAPI.EXO_TipoMensaje.Excepcion)
+        Catch ex As Exception
+            objGlobal.Mostrar_Error(ex, EXO_UIAPI.EXO_UIAPI.EXO_TipoMensaje.Excepcion)
+        Finally
+        End Try
+    End Sub
 End Class

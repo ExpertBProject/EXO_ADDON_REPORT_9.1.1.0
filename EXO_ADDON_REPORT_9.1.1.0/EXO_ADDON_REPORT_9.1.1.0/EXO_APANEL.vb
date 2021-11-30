@@ -154,6 +154,15 @@ Public Class EXO_APANEL
         Try
             oForm = objGlobal.SBOApp.Forms.Item(pVal.FormUID)
             If oForm.Visible = True Then
+                CType(oForm.Items.Item("0_U_G").Specific, SAPbouiCOM.Matrix).Columns.Item("C_0_1").Visible = False
+
+                CargarCombos(objGlobal, oForm)
+                If oForm.Mode = SAPbouiCOM.BoFormMode.fm_OK_MODE Then 'Para que el combo enseñe la descripción
+                    If objGlobal.SBOApp.Menus.Item("1304").Enabled = True Then
+                        objGlobal.SBOApp.ActivateMenuItem("1304")
+                    End If
+                End If
+
                 oItem = oForm.Items.Item("0_U_E")
                 oItem.SetAutoManagedAttribute(SAPbouiCOM.BoAutoManagedAttr.ama_Editable, SAPbouiCOM.BoAutoFormMode.afm_Find, SAPbouiCOM.BoModeVisualBehavior.mvb_False)
                 oItem.SetAutoManagedAttribute(SAPbouiCOM.BoAutoManagedAttr.ama_Editable, SAPbouiCOM.BoAutoFormMode.afm_Add, SAPbouiCOM.BoModeVisualBehavior.mvb_False)
@@ -164,14 +173,16 @@ Public Class EXO_APANEL
                 oItem.SetAutoManagedAttribute(SAPbouiCOM.BoAutoManagedAttr.ama_Editable, SAPbouiCOM.BoAutoFormMode.afm_Add, SAPbouiCOM.BoModeVisualBehavior.mvb_False)
                 oItem.SetAutoManagedAttribute(SAPbouiCOM.BoAutoManagedAttr.ama_Editable, SAPbouiCOM.BoAutoFormMode.afm_Ok, SAPbouiCOM.BoModeVisualBehavior.mvb_False)
 
-                CType(oForm.Items.Item("0_U_G").Specific, SAPbouiCOM.Matrix).Columns.Item("C_0_1").Visible = False
+
 
                 If INICIO._sCodeAPANEL <> "" Then
                     oForm.Mode = BoFormMode.fm_ADD_MODE
                     oForm.DataSources.DBDataSources.Item("@EXO_APANEL").SetValue("Code", 0, INICIO._sCodeAPANEL)
                     oForm.DataSources.DBDataSources.Item("@EXO_APANEL").SetValue("Name", 0, INICIO._sNameAPANEL)
                 End If
-                CargarCombos(objGlobal, oForm)
+
+
+
             End If
 
             EventHandler_Form_Visible = True
@@ -189,11 +200,31 @@ Public Class EXO_APANEL
     Private Sub CargarCombos(ByRef objGlobal As EXO_UIAPI.EXO_UIAPI, ByRef oForm As SAPbouiCOM.Form)
         Dim sSQL As String = ""
         Dim sUsuario_Owner As String = ""
+        Dim oRecordSet As SAPbobsCOM.Recordset = Nothing
         Try
-            sUsuario_Owner = objGlobal.refDi.OGEN.usuarioSQL
-            sSQL = "SELECT ""SCHEMA_NAME"" ""BBDD"",""SCHEMA_NAME"" ""SCHEMA"" FROM SYS.SCHEMAS WHERE ""SCHEMA_OWNER""='" & sUsuario_Owner & "' ORDER BY ""SCHEMA_NAME"" "
-            objGlobal.funcionesUI.cargaCombo(CType(oForm.Items.Item("0_U_G").Specific, SAPbouiCOM.Matrix).Columns.Item("C_0_2").ValidValues, sSQL)
 
+            'sUsuario_Owner = objGlobal.refDi.OGEN.usuarioSQL
+            'sSQL = "SELECT ""SCHEMA_NAME"" ""BBDD"",""SCHEMA_NAME"" ""SCHEMA"" FROM SYS.SCHEMAS WHERE ""SCHEMA_OWNER""='" & sUsuario_Owner & "' ORDER BY ""SCHEMA_NAME"" "
+            'objGlobal.funcionesUI.cargaCombo(CType(oForm.Items.Item("0_U_G").Specific, SAPbouiCOM.Matrix).Columns.Item("C_0_2").ValidValues, sSQL)
+
+            oRecordSet = objGlobal.compañia.GetCompanyList()
+            Dim oXml As System.Xml.XmlDocument = New System.Xml.XmlDocument
+            Dim oNodes As System.Xml.XmlNodeList = Nothing
+            Dim oNode As System.Xml.XmlNode = Nothing
+            oXml.LoadXml(oRecordSet.GetAsXML())
+            oNodes = oXml.SelectNodes("//row")
+
+            'Añadimos valores
+            If oRecordSet.RecordCount > 0 Then
+                For j As Integer = 0 To oNodes.Count - 1
+                    oNode = oNodes.Item(j)
+                    Try
+                        CType(oForm.Items.Item("0_U_G").Specific, SAPbouiCOM.Matrix).Columns.Item("C_0_2").ValidValues.Add(oNode.SelectSingleNode("dbName").InnerText, oNode.SelectSingleNode("cmpName").InnerText)
+                    Catch ex As Exception
+
+                    End Try
+                Next
+            End If
         Catch ex As Exception
             Throw ex
         End Try

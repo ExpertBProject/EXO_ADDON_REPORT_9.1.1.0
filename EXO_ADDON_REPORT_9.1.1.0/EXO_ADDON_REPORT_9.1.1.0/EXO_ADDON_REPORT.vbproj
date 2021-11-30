@@ -68,22 +68,31 @@
     <CodeAnalysisRuleSet>MinimumRecommendedRules.ruleset</CodeAnalysisRuleSet>
   </PropertyGroup>
   <ItemGroup>
-    <Reference Include="EXO_BasicDLL">
+    <Reference Include="EPPlus">
+      <HintPath>..\..\..\..\..\Cliente\9.1.1.0\x64\desarrollo\EPPlus.dll</HintPath>
+    </Reference>
+    <Reference Include="EXO_BasicDLL, Version=9.1.1.0, Culture=neutral, processorArchitecture=AMD64">
+      <SpecificVersion>False</SpecificVersion>
       <HintPath>..\..\..\..\..\Cliente\9.1.1.0\x64\desarrollo\EXO_BasicDLL.dll</HintPath>
     </Reference>
-    <Reference Include="EXO_CleanCOM">
+    <Reference Include="EXO_CleanCOM, Version=9.1.1.0, Culture=neutral, processorArchitecture=AMD64">
+      <SpecificVersion>False</SpecificVersion>
       <HintPath>..\..\..\..\..\Cliente\9.1.1.0\x64\desarrollo\EXO_CleanCOM.dll</HintPath>
     </Reference>
-    <Reference Include="EXO_DIAPI">
+    <Reference Include="EXO_DIAPI, Version=9.1.1.0, Culture=neutral, processorArchitecture=AMD64">
+      <SpecificVersion>False</SpecificVersion>
       <HintPath>..\..\..\..\..\Cliente\9.1.1.0\x64\desarrollo\EXO_DIAPI.dll</HintPath>
     </Reference>
-    <Reference Include="EXO_Generales">
+    <Reference Include="EXO_Generales, Version=9.1.1.0, Culture=neutral, processorArchitecture=AMD64">
+      <SpecificVersion>False</SpecificVersion>
       <HintPath>..\..\..\..\..\Cliente\9.1.1.0\x64\desarrollo\EXO_Generales.dll</HintPath>
     </Reference>
-    <Reference Include="EXO_Log">
+    <Reference Include="EXO_Log, Version=9.1.1.0, Culture=neutral, processorArchitecture=AMD64">
+      <SpecificVersion>False</SpecificVersion>
       <HintPath>..\..\..\..\..\Cliente\9.1.1.0\x64\desarrollo\EXO_Log.dll</HintPath>
     </Reference>
-    <Reference Include="EXO_UIAPI">
+    <Reference Include="EXO_UIAPI, Version=9.1.1.0, Culture=neutral, processorArchitecture=AMD64">
+      <SpecificVersion>False</SpecificVersion>
       <HintPath>..\..\..\..\..\Cliente\9.1.1.0\x64\desarrollo\EXO_UIAPI.dll</HintPath>
     </Reference>
     <Reference Include="System" />
@@ -137,6 +146,7 @@
     </EmbeddedResource>
   </ItemGroup>
   <ItemGroup>
+    <EmbeddedResource Include="EXCEL\MENU.xlsx" />
     <None Include="My Project\Application.myapp">
       <Generator>MyApplicationCodeGenerator</Generator>
       <LastGenOutput>Application.Designer.vb</LastGenOutput>
@@ -166,7 +176,7 @@
       <Lcid>0</Lcid>
       <WrapperTool>tlbimp</WrapperTool>
       <Isolated>False</Isolated>
-      <EmbedInteropTypes>True</EmbedInteropTypes>
+      <EmbedInteropTypes>False</EmbedInteropTypes>
     </COMReference>
     <COMReference Include="SAPbouiCOM">
       <Guid>{6048236A-956D-498D-A6F1-9C81C13AB6E8}</Guid>
@@ -175,7 +185,7 @@
       <Lcid>0</Lcid>
       <WrapperTool>tlbimp</WrapperTool>
       <Isolated>False</Isolated>
-      <EmbedInteropTypes>True</EmbedInteropTypes>
+      <EmbedInteropTypes>False</EmbedInteropTypes>
     </COMReference>
   </ItemGroup>
   <ItemGroup>
@@ -193,6 +203,7 @@
 copy $(TargetPath) "\\XPER-RDPDES01\Ficheros\demo_sbo\10.Dll_64\EXT\$(TargetFileName)"
 copy $(TargetPath) "C:\Program Files\SAP\SAP Business One\AddOns\EXO\EXO_Kernel_Web\X64Client\DLLs\$(TargetFileName)"
 copy $(TargetPath) "E:\Desarrollo\Cliente\9.1.1.0\x64\desarrollo\DLLs\$(TargetFileName)"
+copy $(TargetPath) "E:\Desarrollo\Cliente\9.1.1.0\ClienteLigeroWeb\x64Client\DLLs\$(TargetFileName)"
 )
 </PostBuildEvent>
   </PropertyGroup>
