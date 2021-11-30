@@ -345,10 +345,10 @@ Public Class EXO_REPORT
                 Exit Sub
             Else
                 sPath += "\MENU.xlsx"
-                'If IO.File.Exists(sPath) = False Then
-                'Sino existe lo copiamos y asignamos
-                EXO_GLOBALES.CopiarRecurso(Reflection.Assembly.GetExecutingAssembly(), "MENU.xlsx", sPath)
-                'End If
+                If IO.File.Exists(sPath) = False Then
+                    'Sino existe lo copiamos y asignamos
+                    EXO_GLOBALES.CopiarRecurso(Reflection.Assembly.GetExecutingAssembly(), "MENU.xlsx", sPath)
+                End If
             End If
 
             ' miramos si existe el fichero y cargamos

@@ -200,7 +200,7 @@ Public Class EXO_APANEL
     Private Sub CargarCombos(ByRef objGlobal As EXO_UIAPI.EXO_UIAPI, ByRef oForm As SAPbouiCOM.Form)
         Dim sSQL As String = ""
         Dim sUsuario_Owner As String = ""
-        Dim oRecordSet As SAPbobsCOM.Recordset = Nothing
+        Dim oRecordSet As SAPbobsCOM.Recordset = CType(objGlobal.compañia.GetBusinessObject(SAPbobsCOM.BoObjectTypes.BoRecordset), SAPbobsCOM.Recordset)
         Try
 
             'sUsuario_Owner = objGlobal.refDi.OGEN.usuarioSQL
