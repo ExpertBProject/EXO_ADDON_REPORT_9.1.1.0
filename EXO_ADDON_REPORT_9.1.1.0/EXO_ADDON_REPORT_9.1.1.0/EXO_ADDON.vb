@@ -191,7 +191,7 @@ Public Class EXO_ADDON
                     'Hacemos copia de seguridad para tratarlo
                     OdtEmpresas = New System.Data.DataTable
                     OdtEmpresas.Clear()
-                    sSQL = "SELECT * FROM ""@EXO_IPANELL"" WHERE ""Code""='INTERCOMPANY' and ""U_EXO_TIPO""='D' "
+                    sSQL = "SELECT * FROM ""@EXO_APANELL"" WHERE ""Code""='INTERCOMPANY' and ""U_EXO_TIPO""='D' "
                     OdtEmpresas = objGlobal.refDi.SQL.sqlComoDataTable(sSQL)
                     If OdtEmpresas.Rows.Count > 0 Then
                         objGlobal.SBOApp.StatusBar.SetText("Se va a proceder a recorrer las SOCIEDADES...", BoMessageTime.bmt_Short, BoStatusBarMessageType.smt_Warning)
