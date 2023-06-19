@@ -205,7 +205,7 @@ Public Class EXO_REPORT
                                 sSQL = "SELECT ""U_EXO_PATH"" FROM """ & oCompanyDes.CompanyDB & """.""@EXO_OGEN"""
                                 sArchivo = objGlobal.refDi.SQL.sqlStringB1(sSQL)
                                 sArchivo &= "\05.Rpt\"
-                                sArchivo = sArchivo & sNomFICH
+                                sArchivo = sArchivo & sBBDD & "_" & sNomFICH
                                 EXO_GLOBALES.Copia_Seguridad(objGlobal, sArchivoOrigen, sArchivo)
                                 'Importamos el report
                                 EXO_GLOBALES.Import_Report(oCompanyDes, objGlobal, sArchivo, oForm)

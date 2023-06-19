@@ -11,8 +11,8 @@ Imports System.Runtime.InteropServices
 <Assembly: AssemblyTitle("EXO_ADDON_REPORT_9.1.1.0")> 
 <Assembly: AssemblyDescription("")>
 <Assembly: AssemblyCompany("EXPERT ONE")>
-<Assembly: AssemblyProduct("EXO_ADDON_REPORT_9.1.1.0")> 
-<Assembly: AssemblyCopyright("Copyright ©  2021")> 
+<Assembly: AssemblyProduct("EXO_ADDON_REPORT_9.1.1.0")>
+<Assembly: AssemblyCopyright("Copyright ©  2023")>
 <Assembly: AssemblyTrademark("")> 
 
 <Assembly: ComVisible(False)>
@@ -31,5 +31,5 @@ Imports System.Runtime.InteropServices
 ' mediante el carácter '*', como se muestra a continuación:
 ' <Assembly: AssemblyVersion("1.0.*")> 
 
-<Assembly: AssemblyVersion("9.1.1.004")>
-<Assembly: AssemblyFileVersion("9.1.1.004")>
+<Assembly: AssemblyVersion("9.1.1.005")>
+<Assembly: AssemblyFileVersion("9.1.1.005")>
