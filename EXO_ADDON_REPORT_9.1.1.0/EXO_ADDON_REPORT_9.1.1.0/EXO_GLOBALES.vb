@@ -102,6 +102,7 @@ Public Class EXO_GLOBALES
         Dim oBlob As SAPbobsCOM.Blob = Nothing
         Dim sReportExiste As String = ""
         Dim sSQL As String = ""
+        Dim bPonerLayoutDFLT As Boolean = False : Dim sReportDFLT As String = ""
 #End Region
         Import_Report = False
         Try
@@ -132,12 +133,22 @@ Public Class EXO_GLOBALES
                 sSQL = "SELECT ""DocCode"" FROM  """ & oCompanyDes.CompanyDB & """.""RDOC"" WHERE ""DocName""='" & oForm.DataSources.UserDataSources.Item("UDNOM").Value.ToString & "' "
                 sReportExiste = oObjGlobal.refDi.SQL.sqlStringB1(sSQL)
                 If sReportExiste <> "" Then
+                    'Comprobar si es por defecto si TYPE CODE<> RCRI
+                    If sTypeCode <> "RCRI" Then
+                        sSQL = "SELECT ""DEFLT_REP"" FROM """ & oCompanyDes.CompanyDB & """.""RTYP"" WHERE ""CODE""='" & oForm.DataSources.UserDataSources.Item("UDL").Value.ToString & "' "
+                        sReportDFLT = oObjGlobal.refDi.SQL.sqlStringB1(sSQL)
+                        If sReportDFLT = sReportExiste Then
+                            bPonerLayoutDFLT = True
+                            sSQL = "UPDATE """ & oCompanyDes.CompanyDB & """.""RTYP"" SET ""DEFLT_REP""='' WHERE ""CODE""='" & oForm.DataSources.UserDataSources.Item("UDL").Value.ToString & "' "
+                            oObjGlobal.refDi.SQL.sqlUpdB1(sSQL)
+                        End If
+                    End If
+
                     Dim oExisteReportParams As SAPbobsCOM.ReportLayoutParams = CType(oLayoutService.GetDataInterface(SAPbobsCOM.ReportLayoutsServiceDataInterfaces.rlsdiReportLayoutParams), SAPbobsCOM.ReportLayoutParams)
                     oExisteReportParams.LayoutCode = sReportExiste
                     oLayoutService.DeleteReportLayout(oExisteReportParams)
                     oObjGlobal.SBOApp.StatusBar.SetText("(EXO) - Se borra Report / Layaout existente", SAPbouiCOM.BoMessageTime.bmt_Short, SAPbouiCOM.BoStatusBarMessageType.smt_Warning)
                 End If
-
 
                 Dim oNewReportParams As SAPbobsCOM.ReportLayoutParams = CType(oLayoutService.GetDataInterface(SAPbobsCOM.ReportLayoutsServiceDataInterfaces.rlsdiReportLayoutParams), SAPbobsCOM.ReportLayoutParams)
                 Select Case sTypeCode
@@ -147,6 +158,10 @@ Public Class EXO_GLOBALES
 
                 'Get code of the added ReportLayout object 
                 newReportCode = oNewReportParams.LayoutCode
+                If sReportDFLT <> "" And bPonerLayoutDFLT = True Then
+                    sSQL = "UPDATE """ & oCompanyDes.CompanyDB & """.""RTYP"" SET ""DEFLT_REP""='" & newReportCode & "' WHERE ""CODE""='" & oForm.DataSources.UserDataSources.Item("UDL").Value.ToString & "' "
+                    oObjGlobal.refDi.SQL.sqlUpdB1(sSQL)
+                End If
             Catch ex As Exception
                 Dim sError As String = Err.Description
                 oObjGlobal.SBOApp.StatusBar.SetText(sError, SAPbouiCOM.BoMessageTime.bmt_Short, SAPbouiCOM.BoStatusBarMessageType.smt_Error)
